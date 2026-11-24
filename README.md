@@ -254,6 +254,12 @@ Les commandes utilisent `bat` car Jenkins est installé sur Windows.
 | `'docker' n'est pas reconnu` | Jenkins ne trouvait pas Docker dans son PATH | Ajout du dossier de Docker au PATH de Jenkins et redémarrage du service |
 | `container name "/mongodb" is already in use` | Anciens conteneurs créés manuellement, avec des noms fixés par `container_name` | `docker rm -f client server mongodb`, puis nouveau build |
 | `origin` pointait vers le dépôt de l'enseignante | Le projet avait été cloné depuis son dépôt | `git remote set-url origin` vers mon propre dépôt |
-## 10. Conclusion
+## 10. Images Docker Hub
+
+- Serveur : https://hub.docker.com/r/yassinebahri/mern-server
+- Client : https://hub.docker.com/r/yassinebahri/mern-client
+
+![Docker Hub](screenshots/dockerhub.png)
+## 11. Conclusion
 
 Ce TP m'a permis de containeriser un client React et un serveur Express avec des Dockerfiles, de les relier à MongoDB par un réseau Docker, puis de tout orchestrer avec un seul fichier `docker-compose.yml` lancé par `docker compose up --build`.
