@@ -177,7 +177,83 @@ Ouvrir `http://localhost:3000`. Le client React appelle l'API Express et affiche
 | `.dockerignore` ignoré | Le fichier était nommé `as.dockerignore` | Renommage en `.dockerignore` |
 | Le serveur ne trouvait pas MongoDB | `MONGO_URI` n'était pas fournie au conteneur | Ajout de `-e MONGO_URI=...` (commande `docker run`) et de `environment` (Compose) |
 | Conflits de noms et de ports | Conteneurs manuels encore présents | `docker rm -f` puis `docker network rm` avant Compose |
+## 9. Pipeline Jenkins
 
-## 9. Conclusion
+Pour automatiser le déploiement, un pipeline Jenkins récupère le code depuis GitHub, construit les images Docker et lance l'application avec Docker Compose.
+
+### Jenkinsfile (à la racine du projet)
+
+```groovy
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build images') {
+            steps {
+                bat 'docker build -t mern-server ./Server'
+                bat 'docker build -t mern-client ./Client'
+            }
+        }
+
+        stage('Deploy with Compose') {
+            steps {
+                bat 'docker compose down'
+                bat 'docker compose up --build -d'
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                bat 'docker compose ps'
+            }
+        }
+    }
+
+    post {
+        failure {
+            bat 'docker compose logs'
+        }
+    }
+}
+```
+
+Les commandes utilisent `bat` car Jenkins est installé sur Windows.
+
+| Étape | Rôle |
+|---|---|
+| Checkout | Récupère le code depuis GitHub |
+| Build images | Construit les images `mern-server` et `mern-client` |
+| Deploy with Compose | Arrête l'ancienne version puis lance `docker compose up --build -d` |
+| Verify | Affiche l'état des conteneurs avec `docker compose ps` |
+| post / failure | En cas d'échec, affiche les logs des conteneurs |
+
+### Création du job
+
+1. Jenkins → **New Item** → `mern-pipeline` → **Pipeline**
+2. Definition : **Pipeline script from SCM**
+3. SCM : **Git**, dépôt `https://github.com/yassinebahri299-commits/tp4ocker.git`
+4. Branche : `*/main`, Script Path : `Jenkinsfile`
+5. **Build Now**
+
+### Résultat
+
+![Stage view](screenshots/jenkins-stage-view.png)
+![Console Output](screenshots/jenkins-console.png)
+![Application](screenshots/jenkins-app.png)
+
+### Problèmes rencontrés
+
+| Problème | Cause | Solution |
+|---|---|---|
+| `'docker' n'est pas reconnu` | Jenkins ne trouvait pas Docker dans son PATH | Ajout du dossier de Docker au PATH de Jenkins et redémarrage du service |
+| `container name "/mongodb" is already in use` | Anciens conteneurs créés manuellement, avec des noms fixés par `container_name` | `docker rm -f client server mongodb`, puis nouveau build |
+| `origin` pointait vers le dépôt de l'enseignante | Le projet avait été cloné depuis son dépôt | `git remote set-url origin` vers mon propre dépôt |
+## 10. Conclusion
 
 Ce TP m'a permis de containeriser un client React et un serveur Express avec des Dockerfiles, de les relier à MongoDB par un réseau Docker, puis de tout orchestrer avec un seul fichier `docker-compose.yml` lancé par `docker compose up --build`.
